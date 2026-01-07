@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Build output
+dist/
+*.zxp
+
+# Certificates
+*.p12
+*.pfx
+
+# IDE
+.idea/
+*.sublime-*
+.vscode/
+
+# Debug
+*.log
+
+# Node
+node_modules/
+
+# Claude
+.claude/

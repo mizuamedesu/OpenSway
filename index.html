@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenSway</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>OpenSway</h1>
+            <span class="version">v1.0.0</span>
+        </header>
+
+        <!-- Mode Selection -->
+        <section class="panel">
+            <label>Mode</label>
+            <select id="modeSelect">
+                <option value="procedural">Procedural</option>
+                <option value="physics">Physics</option>
+                <option value="hybrid">Hybrid</option>
+            </select>
+        </section>
+
+        <!-- Preset Selection -->
+        <section class="panel">
+            <label>Preset</label>
+            <select id="presetSelect">
+                <option value="custom">Custom</option>
+                <option value="hair">Hair</option>
+                <option value="rope">Rope</option>
+                <option value="cloth">Cloth</option>
+                <option value="tail">Tail</option>
+            </select>
+        </section>
+
+        <!-- Parameters -->
+        <section class="panel params">
+            <label>Parameters</label>
+
+            <div class="slider-row">
+                <span class="label">Amplitude</span>
+                <input type="range" id="amplitude" min="0" max="200" value="50">
+                <input type="number" id="amplitudeVal" value="50">
+            </div>
+
+            <div class="slider-row">
+                <span class="label">Frequency</span>
+                <input type="range" id="frequency" min="0" max="10" step="0.1" value="2">
+                <input type="number" id="frequencyVal" value="2" step="0.1">
+            </div>
+
+            <div class="slider-row">
+                <span class="label">Chain Delay</span>
+                <input type="range" id="chainDelay" min="0" max="1" step="0.01" value="0.1">
+                <input type="number" id="chainDelayVal" value="0.1" step="0.01">
+            </div>
+
+            <div class="slider-row">
+                <span class="label">Noise %</span>
+                <input type="range" id="noiseAmount" min="0" max="100" value="20">
+                <input type="number" id="noiseAmountVal" value="20">
+            </div>
+
+            <div class="slider-row">
+                <span class="label">Damping</span>
+                <input type="range" id="damping" min="0" max="100" value="30">
+                <input type="number" id="dampingVal" value="30">
+            </div>
+
+            <div class="slider-row">
+                <span class="label">Stiffness</span>
+                <input type="range" id="stiffness" min="0" max="100" value="50">
+                <input type="number" id="stiffnessVal" value="50">
+            </div>
+
+            <div class="slider-row">
+                <span class="label">Physics Blend %</span>
+                <input type="range" id="physicsBlend" min="0" max="100" value="0">
+                <input type="number" id="physicsBlendVal" value="0">
+            </div>
+
+            <div class="slider-row">
+                <span class="label">Gravity</span>
+                <input type="range" id="gravity" min="-50" max="50" value="0">
+                <input type="number" id="gravityVal" value="0">
+            </div>
+        </section>
+
+        <!-- Decay -->
+        <section class="panel">
+            <label>Decay (Optional)</label>
+            <div class="slider-row">
+                <span class="label">Start (sec)</span>
+                <input type="number" id="decayStart" value="0" step="0.1" min="0">
+            </div>
+            <div class="slider-row">
+                <span class="label">Duration</span>
+                <input type="number" id="decayDuration" value="1" step="0.1" min="0">
+            </div>
+        </section>
+
+        <!-- Action Buttons -->
+        <section class="actions">
+            <button id="btnApply" class="primary">Apply Sway</button>
+            <button id="btnRemove">Remove Sway</button>
+            <button id="btnBake">Bake to Keyframes</button>
+        </section>
+
+        <footer>
+            <span id="status"></span>
+        </footer>
+    </div>
+
+    <script src="js/CSInterface.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
