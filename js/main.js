@@ -9,11 +9,11 @@
 
     // Presets data
     var PRESETS = {
-        custom: { amplitude: 50, frequency: 2, chainDelay: 0.1, noiseAmount: 20, damping: 30, stiffness: 50, physicsBlend: 0, gravity: 0 },
-        hair: { amplitude: 30, frequency: 1.5, chainDelay: 0.08, noiseAmount: 35, damping: 40, stiffness: 20, physicsBlend: 0, gravity: 5 },
-        rope: { amplitude: 40, frequency: 0.8, chainDelay: 0.05, noiseAmount: 10, damping: 60, stiffness: 70, physicsBlend: 80, gravity: 20 },
-        cloth: { amplitude: 50, frequency: 1.0, chainDelay: 0.12, noiseAmount: 50, damping: 30, stiffness: 40, physicsBlend: 40, gravity: 3 },
-        tail: { amplitude: 60, frequency: 2.0, chainDelay: 0.1, noiseAmount: 25, damping: 25, stiffness: 35, physicsBlend: 0, gravity: 0 }
+        custom: { amplitude: 50, frequency: 2, chainDelay: 0.1, noiseAmount: 20, damping: 30, stiffness: 50, physicsBlend: 0, gravity: 0, windDirection: 0, windStrength: 0 },
+        hair: { amplitude: 30, frequency: 1.5, chainDelay: 0.08, noiseAmount: 35, damping: 40, stiffness: 20, physicsBlend: 0, gravity: 5, windDirection: 90, windStrength: 10 },
+        rope: { amplitude: 40, frequency: 0.8, chainDelay: 0.05, noiseAmount: 10, damping: 60, stiffness: 70, physicsBlend: 80, gravity: 20, windDirection: 0, windStrength: 0 },
+        cloth: { amplitude: 50, frequency: 1.0, chainDelay: 0.12, noiseAmount: 50, damping: 30, stiffness: 40, physicsBlend: 40, gravity: 3, windDirection: 45, windStrength: 15 },
+        tail: { amplitude: 60, frequency: 2.0, chainDelay: 0.1, noiseAmount: 25, damping: 25, stiffness: 35, physicsBlend: 0, gravity: 0, windDirection: 0, windStrength: 0 }
     };
 
     // UI Elements
@@ -36,6 +36,10 @@
         physicsBlendVal: null,
         gravity: null,
         gravityVal: null,
+        windDirection: null,
+        windDirectionVal: null,
+        windStrength: null,
+        windStrengthVal: null,
         decayStart: null,
         decayDuration: null,
         btnApply: null,
@@ -65,6 +69,10 @@
         ui.physicsBlendVal = document.getElementById('physicsBlendVal');
         ui.gravity = document.getElementById('gravity');
         ui.gravityVal = document.getElementById('gravityVal');
+        ui.windDirection = document.getElementById('windDirection');
+        ui.windDirectionVal = document.getElementById('windDirectionVal');
+        ui.windStrength = document.getElementById('windStrength');
+        ui.windStrengthVal = document.getElementById('windStrengthVal');
         ui.decayStart = document.getElementById('decayStart');
         ui.decayDuration = document.getElementById('decayDuration');
         ui.btnApply = document.getElementById('btnApply');
@@ -90,6 +98,8 @@
         syncSlider(ui.stiffness, ui.stiffnessVal);
         syncSlider(ui.physicsBlend, ui.physicsBlendVal);
         syncSlider(ui.gravity, ui.gravityVal);
+        syncSlider(ui.windDirection, ui.windDirectionVal);
+        syncSlider(ui.windStrength, ui.windStrengthVal);
 
         // Preset change
         ui.presetSelect.addEventListener('change', function() {
@@ -103,6 +113,8 @@
                 setSliderValue(ui.stiffness, ui.stiffnessVal, preset.stiffness);
                 setSliderValue(ui.physicsBlend, ui.physicsBlendVal, preset.physicsBlend);
                 setSliderValue(ui.gravity, ui.gravityVal, preset.gravity);
+                setSliderValue(ui.windDirection, ui.windDirectionVal, preset.windDirection);
+                setSliderValue(ui.windStrength, ui.windStrengthVal, preset.windStrength);
             }
         });
 
@@ -143,6 +155,8 @@
             stiffness: parseFloat(ui.stiffness.value),
             physicsBlend: parseFloat(ui.physicsBlend.value),
             gravity: parseFloat(ui.gravity.value),
+            windDirection: parseFloat(ui.windDirection.value),
+            windStrength: parseFloat(ui.windStrength.value),
             decayStart: parseFloat(ui.decayStart.value) || 0,
             decayDuration: parseFloat(ui.decayDuration.value) || 1
         };

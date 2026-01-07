@@ -151,26 +151,11 @@ function sortPinsIntoChain(pins) {
     if (pins.length === 0) return [];
     if (pins.length === 1) return pins;
 
-    var rootIndex = 0;
-    var rootY = pins[0].position[1];
-    var rootX = pins[0].position[0];
-
-    for (var i = 1; i < pins.length; i++) {
-        var pos = pins[i].position;
-        if (pos[1] < rootY - 10) {
-            rootY = pos[1];
-            rootX = pos[0];
-            rootIndex = i;
-        } else if (Math.abs(pos[1] - rootY) < 10 && pos[0] < rootX) {
-            rootX = pos[0];
-            rootIndex = i;
-        }
-    }
-
-    var chain = [pins[rootIndex]];
+    // First selected pin becomes the root (fixed point)
+    var chain = [pins[0]];
     var remaining = [];
-    for (var i = 0; i < pins.length; i++) {
-        if (i !== rootIndex) remaining.push(pins[i]);
+    for (var i = 1; i < pins.length; i++) {
+        remaining.push(pins[i]);
     }
 
     while (remaining.length > 0) {
@@ -229,6 +214,8 @@ function createControlLayer(comp, name, params) {
     addSlider("Noise Amount", params.noiseAmount || 20);
     addSlider("Noise Scale", params.noiseScale || 1.0);
     addSlider("Physics Blend", params.physicsBlend || 0);
+    addSlider("Wind Direction", params.windDirection || 0);
+    addSlider("Wind Strength", params.windStrength || 0);
     addSlider("Decay Start", params.decayStart || 0);
     addSlider("Decay Duration", params.decayDuration || 1.0);
     addCheckbox("Enabled", true);
@@ -253,6 +240,8 @@ function generateProceduralExpression(controlLayerName, chainIndex, restPos) {
         'var chainDelay = ctrl.effect("Chain Delay")(1);',
         'var noiseAmt = ctrl.effect("Noise Amount")(1) / 100;',
         'var noiseScale = ctrl.effect("Noise Scale")(1);',
+        'var windDir = ctrl.effect("Wind Direction")(1) * Math.PI / 180;',
+        'var windStr = ctrl.effect("Wind Strength")(1);',
         'var decayStart = ctrl.effect("Decay Start")(1);',
         'var decayDur = ctrl.effect("Decay Duration")(1);',
         '',
@@ -269,7 +258,12 @@ function generateProceduralExpression(controlLayerName, chainIndex, restPos) {
         'var motionX = sineX * (1 - noiseAmt) + noiseX * noiseAmt;',
         'var motionY = sineY * (1 - noiseAmt) + noiseY * noiseAmt * 0.5;',
         '',
-        'var chainMult = 1 + chainIndex * 0.3;',
+        '// Wind force',
+        'var windX = Math.cos(windDir) * windStr * (1 + noise([t * 2, seed + 500]) * 0.5);',
+        'var windY = Math.sin(windDir) * windStr * (1 + noise([t * 2, seed + 600]) * 0.5);',
+        '',
+        '// Root stays fixed, motion increases toward tip',
+        'var chainMult = chainIndex * 0.5;',
         '',
         'var decayMult = 1;',
         'if (decayStart > 0 && time > decayStart) {',
@@ -278,8 +272,8 @@ function generateProceduralExpression(controlLayerName, chainIndex, restPos) {
         '    decayMult = decayMult * decayMult * (3 - 2 * decayMult);',
         '}',
         '',
-        'var offsetX = motionX * amp * chainMult * decayMult;',
-        'var offsetY = motionY * amp * chainMult * decayMult;',
+        'var offsetX = (motionX * amp + windX) * chainMult * decayMult;',
+        'var offsetY = (motionY * amp + windY) * chainMult * decayMult;',
         '',
         'value + [offsetX, offsetY];',
         '}'
@@ -297,6 +291,8 @@ function generatePhysicsExpression(controlLayerName, chainIndex, restPos, parent
         'var stiffness = ctrl.effect("Stiffness")(1) / 100;',
         'var damping = ctrl.effect("Damping")(1) / 100;',
         'var gravity = ctrl.effect("Gravity")(1);',
+        'var windDir = ctrl.effect("Wind Direction")(1) * Math.PI / 180;',
+        'var windStr = ctrl.effect("Wind Strength")(1);',
         'var decayStart = ctrl.effect("Decay Start")(1);',
         'var decayDur = ctrl.effect("Decay Duration")(1);',
         '',
@@ -317,9 +313,12 @@ function generatePhysicsExpression(controlLayerName, chainIndex, restPos, parent
         'var maxIter = Math.min(currentFrame - startFrame, ' + CONFIG.maxPhysicsFrames + ');',
         '',
         'for (var i = 0; i < maxIter; i++) {',
+        '    var seed = chainIndex * 1000;',
+        '    var windX = Math.cos(windDir) * windStr * 0.01 * (1 + noise([i * dt * 2, seed + 500]) * 0.5);',
+        '    var windY = Math.sin(windDir) * windStr * 0.01 * (1 + noise([i * dt * 2, seed + 600]) * 0.5);',
         '    var targetPos = parentPos;',
         '    var springForce = [(targetPos[0] - pos[0]) * k, (targetPos[1] - pos[1]) * k];',
-        '    var gravityForce = [0, gravity * 0.1];',
+        '    var gravityForce = [windX, gravity * 0.1 + windY];',
         '    var accX = springForce[0] + gravityForce[0];',
         '    var accY = springForce[1] + gravityForce[1];',
         '    var velX = (pos[0] - prevPos[0]) * d;',
@@ -369,6 +368,8 @@ function generateHybridExpression(controlLayerName, chainIndex, restPos, parentP
         'var stiffness = ctrl.effect("Stiffness")(1) / 100;',
         'var damping = ctrl.effect("Damping")(1) / 100;',
         'var gravity = ctrl.effect("Gravity")(1);',
+        'var windDir = ctrl.effect("Wind Direction")(1) * Math.PI / 180;',
+        'var windStr = ctrl.effect("Wind Strength")(1);',
         'var blend = ctrl.effect("Physics Blend")(1) / 100;',
         'var decayStart = ctrl.effect("Decay Start")(1);',
         'var decayDur = ctrl.effect("Decay Duration")(1);',
@@ -377,18 +378,22 @@ function generateHybridExpression(controlLayerName, chainIndex, restPos, parentP
         'var restPos = ' + JSON.stringify(restPos) + ';',
         'var restLength = ' + restLength + ';',
         'var t = time - chainIndex * chainDelay;',
+        'var seed = chainIndex * 1000;',
+        '',
+        '// Wind force',
+        'var windX = Math.cos(windDir) * windStr * (1 + noise([t * 2, seed + 500]) * 0.5);',
+        'var windY = Math.sin(windDir) * windStr * (1 + noise([t * 2, seed + 600]) * 0.5);',
         '',
         '// Procedural',
         'var sineX = Math.sin(t * freq * Math.PI * 2 + phase);',
         'var sineY = Math.sin(t * freq * Math.PI * 2 + phase + Math.PI / 4) * 0.3;',
-        'var seed = chainIndex * 1000;',
         'var noiseX = noise([t * noiseScale, seed]) * 2 - 1;',
         'var noiseY = noise([t * noiseScale + 100, seed]) * 2 - 1;',
         'var motionX = sineX * (1 - noiseAmt) + noiseX * noiseAmt;',
         'var motionY = sineY * (1 - noiseAmt) + noiseY * noiseAmt * 0.5;',
-        'var chainMult = 1 + chainIndex * 0.3;',
-        'var procX = value[0] + motionX * amp * chainMult;',
-        'var procY = value[1] + motionY * amp * chainMult;',
+        'var chainMult = chainIndex * 0.5;',
+        'var procX = value[0] + (motionX * amp + windX) * chainMult;',
+        'var procY = value[1] + (motionY * amp + windY) * chainMult;',
         '',
         '// Physics',
         'var dt = thisComp.frameDuration;',
@@ -402,11 +407,13 @@ function generateHybridExpression(controlLayerName, chainIndex, restPos, parentP
         'var maxIter = Math.min(currentFrame, ' + CONFIG.maxPhysicsFrames + ');',
         '',
         'for (var i = 0; i < maxIter; i++) {',
+        '    var wX = Math.cos(windDir) * windStr * 0.01 * (1 + noise([i * dt * 2, seed + 500]) * 0.5);',
+        '    var wY = Math.sin(windDir) * windStr * 0.01 * (1 + noise([i * dt * 2, seed + 600]) * 0.5);',
         '    var springForce = [(parentPos[0] - pos[0]) * k, (parentPos[1] - pos[1]) * k];',
         '    var velX = (pos[0] - prevPos[0]) * d;',
         '    var velY = (pos[1] - prevPos[1]) * d;',
-        '    var newX = pos[0] + velX + springForce[0] * dt * dt + gravity * 0.01 * dt * dt;',
-        '    var newY = pos[1] + velY + springForce[1] * dt * dt;',
+        '    var newX = pos[0] + velX + springForce[0] * dt * dt + wX + gravity * 0.01 * dt * dt;',
+        '    var newY = pos[1] + velY + springForce[1] * dt * dt + wY;',
         '    prevPos = pos;',
         '    pos = [newX, newY];',
         '}',
@@ -511,6 +518,184 @@ function removeSway() {
         }
         app.endUndoGroup();
         return "Removed from " + count + " pins";
+    } catch (e) {
+        app.endUndoGroup();
+        return "Error: " + e.toString();
+    }
+}
+
+// Get all puppet pins from selected layer (for UI listing)
+function getAllPuppetPins() {
+    var comp = getActiveComp();
+    if (!comp) return JSON.stringify({ error: "Please select a composition." });
+
+    var selectedLayers = comp.selectedLayers;
+    if (selectedLayers.length === 0) {
+        return JSON.stringify({ error: "Please select a layer with puppet pins." });
+    }
+
+    var layer = selectedLayers[0];
+    var effects = layer.property("ADBE Effect Parade");
+    if (!effects) return JSON.stringify({ error: "No effects found on layer." });
+
+    var puppetEffect = null;
+    for (var i = 1; i <= effects.numProperties; i++) {
+        var effect = effects.property(i);
+        if (effect.matchName === "ADBE FreePin3") {
+            puppetEffect = effect;
+            break;
+        }
+    }
+
+    if (!puppetEffect) {
+        return JSON.stringify({ error: "No Puppet effect found." });
+    }
+
+    var mesh = puppetEffect.property("ADBE FreePin3 ARAP Group");
+    if (!mesh) return JSON.stringify({ error: "No puppet mesh found." });
+
+    var pins = [];
+    for (var i = 1; i <= mesh.numProperties; i++) {
+        var subGroup = mesh.property(i);
+        if (subGroup.matchName === "ADBE FreePin3 PosPin Group") {
+            for (var j = 1; j <= subGroup.numProperties; j++) {
+                var pin = subGroup.property(j);
+                if (pin.matchName === "ADBE FreePin3 PosPin Atom") {
+                    var posProp = pin.property("ADBE FreePin3 PosPin Position");
+                    if (posProp) {
+                        pins.push({
+                            name: pin.name,
+                            position: posProp.value
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    if (pins.length === 0) {
+        return JSON.stringify({ error: "No puppet pins found." });
+    }
+
+    return JSON.stringify({ pins: pins, layerName: layer.name });
+}
+
+// Apply sway with user-defined pin order
+function applySwayWithOrder(paramsJSON) {
+    var params;
+    try {
+        params = (typeof paramsJSON === 'string') ? JSON.parse(paramsJSON) : paramsJSON;
+    } catch (e) {
+        return "Error: Invalid parameters";
+    }
+
+    var pinOrder = params.pinOrder; // Array of pin names in order
+    if (!pinOrder || pinOrder.length < 2) {
+        alert("Please set at least 2 pins in the chain order.", "OpenSway");
+        return "Error: Need at least 2 pins";
+    }
+
+    var comp = getActiveComp();
+    if (!comp) {
+        alert("Please select a composition.", "OpenSway");
+        return "Error: No composition";
+    }
+
+    var selectedLayers = comp.selectedLayers;
+    if (selectedLayers.length === 0) {
+        alert("Please select a layer with puppet pins.", "OpenSway");
+        return "Error: No layer selected";
+    }
+
+    var layer = selectedLayers[0];
+    var effects = layer.property("ADBE Effect Parade");
+    if (!effects) return "Error: No effects";
+
+    var puppetEffect = null;
+    for (var i = 1; i <= effects.numProperties; i++) {
+        var effect = effects.property(i);
+        if (effect.matchName === "ADBE FreePin3") {
+            puppetEffect = effect;
+            break;
+        }
+    }
+
+    if (!puppetEffect) return "Error: No Puppet effect";
+
+    var mesh = puppetEffect.property("ADBE FreePin3 ARAP Group");
+    if (!mesh) return "Error: No mesh";
+
+    // Build pin map
+    var pinMap = {};
+    for (var i = 1; i <= mesh.numProperties; i++) {
+        var subGroup = mesh.property(i);
+        if (subGroup.matchName === "ADBE FreePin3 PosPin Group") {
+            for (var j = 1; j <= subGroup.numProperties; j++) {
+                var pin = subGroup.property(j);
+                if (pin.matchName === "ADBE FreePin3 PosPin Atom") {
+                    var posProp = pin.property("ADBE FreePin3 PosPin Position");
+                    if (posProp) {
+                        pinMap[pin.name] = {
+                            property: posProp,
+                            pinGroup: pin,
+                            position: posProp.value,
+                            name: pin.name
+                        };
+                    }
+                }
+            }
+        }
+    }
+
+    // Build chain in user-specified order
+    var chain = [];
+    for (var i = 0; i < pinOrder.length; i++) {
+        var pinName = pinOrder[i];
+        if (pinMap[pinName]) {
+            chain.push(pinMap[pinName]);
+        }
+    }
+
+    if (chain.length < 2) {
+        alert("Could not find specified pins.", "OpenSway");
+        return "Error: Pins not found";
+    }
+
+    var mode = params.mode || "procedural";
+
+    app.beginUndoGroup("OpenSway: Apply Sway");
+
+    try {
+        var ctrlName = createUniqueName(comp, CONFIG.controlPrefix + "Control");
+        var ctrlLayer = createControlLayer(comp, ctrlName, params);
+
+        for (var i = 0; i < chain.length; i++) {
+            var pin = chain[i];
+            var restPos = pin.position;
+            var restLength = 50;
+            var parentPinPath = null;
+
+            if (i > 0) {
+                var parentPin = chain[i - 1];
+                restLength = distance2D(restPos, parentPin.position);
+                parentPinPath = 'thisProperty.propertyGroup(2).property("' + parentPin.name + '").property("Position")';
+            }
+
+            var expr;
+            if (mode === "physics") {
+                expr = generatePhysicsExpression(ctrlName, i, restPos, parentPinPath, restLength);
+            } else if (mode === "hybrid") {
+                expr = generateHybridExpression(ctrlName, i, restPos, parentPinPath, restLength);
+            } else {
+                expr = generateProceduralExpression(ctrlName, i, restPos);
+            }
+
+            pin.property.expression = expr;
+        }
+
+        app.endUndoGroup();
+        return "Applied to " + chain.length + " pins";
+
     } catch (e) {
         app.endUndoGroup();
         return "Error: " + e.toString();

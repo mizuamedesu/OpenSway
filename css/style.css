@@ -181,6 +181,116 @@ footer {
     color: #f44336;
 }
 
+/* Pin Chain */
+.pin-chain-panel {
+    padding-bottom: 8px;
+}
+
+.pin-chain-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.pin-chain-header .layer-name {
+    font-size: 10px;
+    color: #888;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+button.small {
+    padding: 5px 10px;
+    font-size: 10px;
+}
+
+.pin-list {
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    max-height: 120px;
+    overflow-y: auto;
+    min-height: 40px;
+}
+
+.pin-list-empty {
+    padding: 12px;
+    text-align: center;
+    color: #666;
+    font-size: 10px;
+}
+
+.pin-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    border-bottom: 1px solid #2a2a2a;
+    cursor: move;
+    transition: background 0.15s;
+}
+
+.pin-item:last-child {
+    border-bottom: none;
+}
+
+.pin-item:hover {
+    background: #2a2a2a;
+}
+
+.pin-item.dragging {
+    background: #00c8ff;
+    color: #000;
+    opacity: 0.8;
+}
+
+.pin-item.drag-over {
+    border-top: 2px solid #00c8ff;
+}
+
+.pin-item .pin-index {
+    width: 20px;
+    font-size: 10px;
+    color: #666;
+    font-weight: 600;
+}
+
+.pin-item .pin-name {
+    flex: 1;
+    font-size: 11px;
+}
+
+.pin-item .pin-pos {
+    font-size: 9px;
+    color: #666;
+}
+
+.pin-item .pin-remove {
+    width: 16px;
+    height: 16px;
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1;
+    margin-left: 4px;
+}
+
+.pin-item .pin-remove:hover {
+    color: #f44;
+    background: none;
+}
+
+.pin-chain-hint {
+    margin-top: 6px;
+    font-size: 9px;
+    color: #666;
+    text-align: center;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
     width: 8px;
