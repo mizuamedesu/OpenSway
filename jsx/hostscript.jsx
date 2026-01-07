@@ -8,8 +8,7 @@
 // ============================================================
 
 var CONFIG = {
-    controlPrefix: "OpenSway_",
-    maxPhysicsFrames: 500
+    controlPrefix: "OpenSway_"
 };
 
 // ============================================================
@@ -213,7 +212,6 @@ function createControlLayer(comp, name, params) {
     addSlider("Chain Delay", params.chainDelay || 0.1);
     addSlider("Noise Amount", params.noiseAmount || 20);
     addSlider("Noise Scale", params.noiseScale || 1.0);
-    addSlider("Physics Blend", params.physicsBlend || 0);
     addSlider("Wind Direction", params.windDirection || 0);
     addSlider("Wind Strength", params.windStrength || 0);
     addSlider("Decay Start", params.decayStart || 0);
@@ -281,163 +279,6 @@ function generateProceduralExpression(controlLayerName, chainIndex, restPos) {
     return expr.join('\n');
 }
 
-function generatePhysicsExpression(controlLayerName, chainIndex, restPos, parentPinPath, restLength) {
-    var expr = [
-        '// OpenSway Physics Mode (Verlet Integration)',
-        'var ctrl = thisComp.layer("' + controlLayerName + '");',
-        'var enabled = ctrl.effect("Enabled")(1);',
-        'if (enabled == 0) { value; } else {',
-        '',
-        'var stiffness = ctrl.effect("Stiffness")(1) / 100;',
-        'var damping = ctrl.effect("Damping")(1) / 100;',
-        'var gravity = ctrl.effect("Gravity")(1);',
-        'var windDir = ctrl.effect("Wind Direction")(1) * Math.PI / 180;',
-        'var windStr = ctrl.effect("Wind Strength")(1);',
-        'var decayStart = ctrl.effect("Decay Start")(1);',
-        'var decayDur = ctrl.effect("Decay Duration")(1);',
-        '',
-        'var chainIndex = ' + chainIndex + ';',
-        'var restLength = ' + restLength + ';',
-        'var restPos = ' + JSON.stringify(restPos) + ';',
-        '',
-        'var dt = thisComp.frameDuration;',
-        'var k = stiffness * 0.5;',
-        'var d = 1 - damping * 0.05;',
-        '',
-        parentPinPath ? 'var parentPos = ' + parentPinPath + ';' : 'var parentPos = restPos;',
-        '',
-        'var pos = restPos;',
-        'var prevPos = restPos;',
-        'var startFrame = 0;',
-        'var currentFrame = Math.floor(time / dt);',
-        'var maxIter = Math.min(currentFrame - startFrame, ' + CONFIG.maxPhysicsFrames + ');',
-        '',
-        'for (var i = 0; i < maxIter; i++) {',
-        '    var seed = chainIndex * 1000;',
-        '    var windX = Math.cos(windDir) * windStr * 0.01 * (1 + noise([i * dt * 2, seed + 500]) * 0.5);',
-        '    var windY = Math.sin(windDir) * windStr * 0.01 * (1 + noise([i * dt * 2, seed + 600]) * 0.5);',
-        '    var targetPos = parentPos;',
-        '    var springForce = [(targetPos[0] - pos[0]) * k, (targetPos[1] - pos[1]) * k];',
-        '    var gravityForce = [windX, gravity * 0.1 + windY];',
-        '    var accX = springForce[0] + gravityForce[0];',
-        '    var accY = springForce[1] + gravityForce[1];',
-        '    var velX = (pos[0] - prevPos[0]) * d;',
-        '    var velY = (pos[1] - prevPos[1]) * d;',
-        '    var newX = pos[0] + velX + accX * dt * dt;',
-        '    var newY = pos[1] + velY + accY * dt * dt;',
-        '    var toParentX = newX - parentPos[0];',
-        '    var toParentY = newY - parentPos[1];',
-        '    var dist = Math.sqrt(toParentX * toParentX + toParentY * toParentY);',
-        '    if (dist > restLength * 1.5) {',
-        '        var scale = restLength * 1.5 / dist;',
-        '        newX = parentPos[0] + toParentX * scale;',
-        '        newY = parentPos[1] + toParentY * scale;',
-        '    }',
-        '    prevPos = pos;',
-        '    pos = [newX, newY];',
-        '}',
-        '',
-        'var decayMult = 1;',
-        'if (decayStart > 0 && time > decayStart) {',
-        '    var elapsed = time - decayStart;',
-        '    decayMult = Math.max(0, 1 - elapsed / Math.max(0.001, decayDur));',
-        '}',
-        '',
-        'var finalX = restPos[0] + (pos[0] - restPos[0]) * decayMult;',
-        'var finalY = restPos[1] + (pos[1] - restPos[1]) * decayMult;',
-        '',
-        '[finalX, finalY];',
-        '}'
-    ];
-    return expr.join('\n');
-}
-
-function generateHybridExpression(controlLayerName, chainIndex, restPos, parentPinPath, restLength) {
-    var expr = [
-        '// OpenSway Hybrid Mode',
-        'var ctrl = thisComp.layer("' + controlLayerName + '");',
-        'var enabled = ctrl.effect("Enabled")(1);',
-        'if (enabled == 0) { value; } else {',
-        '',
-        'var amp = ctrl.effect("Amplitude")(1);',
-        'var freq = ctrl.effect("Frequency")(1);',
-        'var phase = ctrl.effect("Phase Offset")(1) * Math.PI / 180;',
-        'var chainDelay = ctrl.effect("Chain Delay")(1);',
-        'var noiseAmt = ctrl.effect("Noise Amount")(1) / 100;',
-        'var noiseScale = ctrl.effect("Noise Scale")(1);',
-        'var stiffness = ctrl.effect("Stiffness")(1) / 100;',
-        'var damping = ctrl.effect("Damping")(1) / 100;',
-        'var gravity = ctrl.effect("Gravity")(1);',
-        'var windDir = ctrl.effect("Wind Direction")(1) * Math.PI / 180;',
-        'var windStr = ctrl.effect("Wind Strength")(1);',
-        'var blend = ctrl.effect("Physics Blend")(1) / 100;',
-        'var decayStart = ctrl.effect("Decay Start")(1);',
-        'var decayDur = ctrl.effect("Decay Duration")(1);',
-        '',
-        'var chainIndex = ' + chainIndex + ';',
-        'var restPos = ' + JSON.stringify(restPos) + ';',
-        'var restLength = ' + restLength + ';',
-        'var t = time - chainIndex * chainDelay;',
-        'var seed = chainIndex * 1000;',
-        '',
-        '// Wind force',
-        'var windX = Math.cos(windDir) * windStr * (1 + noise([t * 2, seed + 500]) * 0.5);',
-        'var windY = Math.sin(windDir) * windStr * (1 + noise([t * 2, seed + 600]) * 0.5);',
-        '',
-        '// Procedural',
-        'var sineX = Math.sin(t * freq * Math.PI * 2 + phase);',
-        'var sineY = Math.sin(t * freq * Math.PI * 2 + phase + Math.PI / 4) * 0.3;',
-        'var noiseX = noise([t * noiseScale, seed]) * 2 - 1;',
-        'var noiseY = noise([t * noiseScale + 100, seed]) * 2 - 1;',
-        'var motionX = sineX * (1 - noiseAmt) + noiseX * noiseAmt;',
-        'var motionY = sineY * (1 - noiseAmt) + noiseY * noiseAmt * 0.5;',
-        'var chainMult = chainIndex * 0.5;',
-        'var procX = value[0] + (motionX * amp + windX) * chainMult;',
-        'var procY = value[1] + (motionY * amp + windY) * chainMult;',
-        '',
-        '// Physics',
-        'var dt = thisComp.frameDuration;',
-        'var k = stiffness * 0.5;',
-        'var d = 1 - damping * 0.05;',
-        parentPinPath ? 'var parentPos = ' + parentPinPath + ';' : 'var parentPos = restPos;',
-        '',
-        'var pos = restPos;',
-        'var prevPos = restPos;',
-        'var currentFrame = Math.floor(time / dt);',
-        'var maxIter = Math.min(currentFrame, ' + CONFIG.maxPhysicsFrames + ');',
-        '',
-        'for (var i = 0; i < maxIter; i++) {',
-        '    var wX = Math.cos(windDir) * windStr * 0.01 * (1 + noise([i * dt * 2, seed + 500]) * 0.5);',
-        '    var wY = Math.sin(windDir) * windStr * 0.01 * (1 + noise([i * dt * 2, seed + 600]) * 0.5);',
-        '    var springForce = [(parentPos[0] - pos[0]) * k, (parentPos[1] - pos[1]) * k];',
-        '    var velX = (pos[0] - prevPos[0]) * d;',
-        '    var velY = (pos[1] - prevPos[1]) * d;',
-        '    var newX = pos[0] + velX + springForce[0] * dt * dt + wX + gravity * 0.01 * dt * dt;',
-        '    var newY = pos[1] + velY + springForce[1] * dt * dt + wY;',
-        '    prevPos = pos;',
-        '    pos = [newX, newY];',
-        '}',
-        'var physX = pos[0];',
-        'var physY = pos[1];',
-        '',
-        '// Blend',
-        'var finalX = procX * (1 - blend) + physX * blend;',
-        'var finalY = procY * (1 - blend) + physY * blend;',
-        '',
-        'var decayMult = 1;',
-        'if (decayStart > 0 && time > decayStart) {',
-        '    var elapsed = time - decayStart;',
-        '    decayMult = Math.max(0, 1 - elapsed / Math.max(0.001, decayDur));',
-        '}',
-        '',
-        'var outX = value[0] + (finalX - value[0]) * decayMult;',
-        'var outY = value[1] + (finalY - value[1]) * decayMult;',
-        '[outX, outY];',
-        '}'
-    ];
-    return expr.join('\n');
-}
-
 // ============================================================
 // Main Functions (Called from Panel)
 // ============================================================
@@ -457,7 +298,6 @@ function applySwayFromPanel(paramsJSON) {
     }
 
     var chain = sortPinsIntoChain(data.pins);
-    var mode = params.mode || "procedural";
 
     app.beginUndoGroup("OpenSway: Apply Sway");
 
@@ -468,24 +308,8 @@ function applySwayFromPanel(paramsJSON) {
         for (var i = 0; i < chain.length; i++) {
             var pin = chain[i];
             var restPos = pin.position;
-            var restLength = 50;
-            var parentPinPath = null;
 
-            if (i > 0) {
-                var parentPin = chain[i - 1];
-                restLength = distance2D(restPos, parentPin.position);
-                parentPinPath = 'thisProperty.propertyGroup(2).property("' + parentPin.name + '").property("Position")';
-            }
-
-            var expr;
-            if (mode === "physics") {
-                expr = generatePhysicsExpression(ctrlName, i, restPos, parentPinPath, restLength);
-            } else if (mode === "hybrid") {
-                expr = generateHybridExpression(ctrlName, i, restPos, parentPinPath, restLength);
-            } else {
-                expr = generateProceduralExpression(ctrlName, i, restPos);
-            }
-
+            var expr = generateProceduralExpression(ctrlName, i, restPos);
             pin.property.expression = expr;
         }
 
@@ -661,8 +485,6 @@ function applySwayWithOrder(paramsJSON) {
         return "Error: Pins not found";
     }
 
-    var mode = params.mode || "procedural";
-
     app.beginUndoGroup("OpenSway: Apply Sway");
 
     try {
@@ -672,24 +494,8 @@ function applySwayWithOrder(paramsJSON) {
         for (var i = 0; i < chain.length; i++) {
             var pin = chain[i];
             var restPos = pin.position;
-            var restLength = 50;
-            var parentPinPath = null;
 
-            if (i > 0) {
-                var parentPin = chain[i - 1];
-                restLength = distance2D(restPos, parentPin.position);
-                parentPinPath = 'thisProperty.propertyGroup(2).property("' + parentPin.name + '").property("Position")';
-            }
-
-            var expr;
-            if (mode === "physics") {
-                expr = generatePhysicsExpression(ctrlName, i, restPos, parentPinPath, restLength);
-            } else if (mode === "hybrid") {
-                expr = generateHybridExpression(ctrlName, i, restPos, parentPinPath, restLength);
-            } else {
-                expr = generateProceduralExpression(ctrlName, i, restPos);
-            }
-
+            var expr = generateProceduralExpression(ctrlName, i, restPos);
             pin.property.expression = expr;
         }
 
